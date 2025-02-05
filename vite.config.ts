@@ -1,9 +1,10 @@
-import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
 import * as path from 'path'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  base: '/',
   plugins: [vue(), tailwindcss()],
   server: {
     port: 1978, // Change this to your preferred port

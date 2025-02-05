@@ -20,7 +20,7 @@ export const useRouteStore = defineStore('route', {
       if (savedRoute) {
         this.initialRoute = JSON.parse(savedRoute)
       } else {
-        const response = await fetch('/assets/state_capitals.json')
+        const response = await fetch('./assets/state_capitals.json')
         const stateData = await response.json()
 
         this.initialRoute = Object.keys(stateData).map((key) => ({
