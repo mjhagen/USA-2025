@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import stateData from '@/assets/state_capitals.json'
 
 interface State {
   name: string
@@ -14,13 +13,16 @@ export const useRouteStore = defineStore('route', {
     tempRange: [65, 75] as [number, number]
   }),
   actions: {
-    loadFromLocalStorage() {
+    async loadFromLocalStorage() {
       const savedRoute = localStorage.getItem('routeData')
       const savedTempRange = localStorage.getItem('tempRange')
 
       if (savedRoute) {
         this.initialRoute = JSON.parse(savedRoute)
       } else {
+        const response = await fetch('/assets/state_capitals.json')
+        const stateData = await response.json()
+
         this.initialRoute = Object.keys(stateData).map((key) => ({
           name: key,
           lat: stateData[key].coordinates[0],
