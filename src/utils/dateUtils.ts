@@ -26,11 +26,22 @@ export const calculateDateAndTemp = (
 }
 
 export const getMonthColor = (date: Date) => {
+  // Colors reflecting average temperatures on the Northern Hemisphere
   const monthColors = [
-    '#39FF14', '#00FFFF', '#FF007F', '#DFFF00', '#0FF0FC',
-    '#FF5F1F', '#B026FF', '#FFFF54', '#FF00FF', '#B0FF00',
-    '#FF073A', '#30D5C8'
+    '#1E90FF', // January - cold (DodgerBlue)
+    '#00BFFF', // February - cold (DeepSkyBlue)
+    '#87CEFA', // March - cool (LightSkyBlue)
+    '#FFD700', // April - warming up (Gold)
+    '#FFA500', // May - warm (Orange)
+    '#FF4500', // June - hot (OrangeRed)
+    '#FF0000', // July - hottest (Red)
+    '#FF6347', // August - hot (Tomato)
+    '#FFD700', // September - warm (Gold)
+    '#FFA07A', // October - cooling down (LightSalmon)
+    '#20B2AA', // November - cool (LightSeaGreen)
+    '#4682B4'  // December - cold (SteelBlue)
   ]
+
   return monthColors[date.getMonth() % 12]
 }
 
