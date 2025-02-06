@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Slider from '@vueform/slider'
+import '@vueform/slider/themes/default.css'
 
 const tempRange = defineModel<[number, number]>()
 </script>

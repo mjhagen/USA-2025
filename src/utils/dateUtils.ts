@@ -1,10 +1,20 @@
-export const calculateDateAndTemp = (state: { temperatures: number[] }, index: number, tempRange: [number, number]) => {
-  const startDate = new Date(2025, 3, 1)
-  const intervalDays = Math.floor((244 - 91) / (state.temperatures.length - 1))
+export const calculateDateAndTemp = (
+  state: { temperatures: number[] },
+  index: number,
+  tempRange: [number, number]
+) => {
+  const startDate = new Date(2025, 3, 1) // April 1, 2025
+  const endDate = new Date(2025, 11, 1)  // December 1, 2025
+  const totalDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+
+  const intervalDays = Math.floor(totalDays / (47)) // Assuming 48 states, adjust if needed
   const date = new Date(startDate)
   date.setDate(startDate.getDate() + index * intervalDays)
 
-  const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24))
+  const dayOfYear = Math.floor(
+    (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24)
+  )
+
   const tempCelsius = state.temperatures[dayOfYear % 365] || 10
   const tempFahrenheit = celsiusToFahrenheit(tempCelsius)
 
