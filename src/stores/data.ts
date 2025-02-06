@@ -55,7 +55,7 @@ export const useRouteStore = defineStore('route', {
       this.saveToLocalStorage()
     },
 
-    async sortRouteTSP(initialMaxDistance: number = 100) {
+    async sortRouteTSP(initialMaxDistance: number = 600) {
       this.initialRoute = await this.loadOriginalRouteFromFile();
       if (this.initialRoute.length < 2) return;
     
@@ -70,6 +70,28 @@ export const useRouteStore = defineStore('route', {
         const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
     
         return R * c;
+      };
+    
+      const twoOpt = (route: State[]) => {
+        let improved = true;
+        while (improved) {
+          improved = false;
+          for (let i = 1; i < route.length - 1; i++) {
+            for (let j = i + 1; j < route.length; j++) {
+              const newRoute = [...route];
+              newRoute.splice(i, j - i + 1, ...route.slice(i, j + 1).reverse());
+    
+              const currentDistance = distance(route[i - 1], route[i]) + distance(route[j], route[(j + 1) % route.length]);
+              const newDistance = distance(newRoute[i - 1], newRoute[i]) + distance(newRoute[j], newRoute[(j + 1) % newRoute.length]);
+    
+              if (newDistance < currentDistance) {
+                route = newRoute;
+                improved = true;
+              }
+            }
+          }
+        }
+        return route;
       };
     
       let bestRoute: State[] = [];
@@ -102,7 +124,9 @@ export const useRouteStore = defineStore('route', {
     
           if (stagnationCount >= STAGNATION_THRESHOLD) return;
     
-          const candidates = remaining.filter(city => distance(current, city) <= maxDistance);
+          const candidates = remaining
+            .filter(city => distance(current, city) <= maxDistance)
+            .sort((a, b) => distance(current, a) - distance(current, b));
     
           for (const next of candidates) {
             const newRemaining = remaining.filter(city => city !== next);
@@ -119,7 +143,6 @@ export const useRouteStore = defineStore('route', {
           }
         };
     
-        // Start with a random state
         const randomIndex = Math.floor(Math.random() * this.initialRoute.length);
         const start = this.initialRoute[randomIndex];
         const remaining = [...this.initialRoute];
@@ -136,6 +159,8 @@ export const useRouteStore = defineStore('route', {
           console.warn(`Incomplete route found. Increasing maxDistance to ${maxDistance} miles and retrying.`);
         }
       }
+    
+      bestRoute = twoOpt(bestRoute);
     
       const endTime = performance.now();
       console.log(`TSP calculation completed in ${(endTime - startTime).toFixed(2)} ms`);
