@@ -3,13 +3,12 @@ import { onMounted, ref, watch, nextTick } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { calculateDateAndTemp, getMonthColor } from '../utils/dateUtils'
+import type { State } from '../models/State'
 
-interface Props {
-  route: Array<{ name: string; lat: number; lon: number; temperatures: number[] }>
+const props = defineProps<{
+  route: State[]
   tempRange: [number, number]
-}
-
-const props = defineProps<Props>()
+}>()
 
 const map = ref<L.Map | null>(null)
 let markers: L.Marker[] = []

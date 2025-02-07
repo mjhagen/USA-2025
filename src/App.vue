@@ -3,14 +3,12 @@
     <div class="flex items-end justify-between mb-4 sticky">
       <h1 class="text-2xl font-bold">Interactive Route Mapper</h1>
       <TemperatureSlider v-model="routeStore.tempRange" />
-      <button @click="() => routeStore.sortRouteTSP()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-        Sort via TSP
-      </button>
+      <TspToggleButton />
     </div>
 
     <div class="flex w-full h-screen">
-      <StateList :route="routeStore.initialRoute" :tempRange="routeStore.tempRange" />
-      <MapView :route="routeStore.initialRoute" :tempRange="routeStore.tempRange" />
+      <StateList :route="routeStore.getInitialRoute" :tempRange="routeStore.tempRange" />
+      <MapView :route="routeStore.getInitialRoute" :tempRange="routeStore.tempRange" />
     </div>
   </div>
 </template>
@@ -21,6 +19,7 @@ import { useRouteStore } from './stores/data'
 import MapView from './components/MapView.vue'
 import StateList from './components/StateList.vue'
 import TemperatureSlider from './components/TemperatureSlider.vue'
+import TspToggleButton from './components/TspToggleButton.vue'
 
 const routeStore = useRouteStore()
 

@@ -1,42 +1,41 @@
 import { defineStore } from 'pinia'
-
-interface State {
-  name: string
-  lat: number
-  lon: number
-  temperatures: number[]
-}
+import { RouteOptimizer, State } from '../models/State'
 
 export const useRouteStore = defineStore('route', {
   state: () => ({
     initialRoute: [] as State[],
-    tempRange: [65, 75] as [number, number]
+    tempRange: [65, 75] as [number, number],
+    sorting: false
   }),
+
   actions: {
     async loadOriginalRouteFromFile() {
       const response = await fetch('./assets/state_capitals.json')
       const stateData = await response.json()
 
-      return Object.keys(stateData).map((key) => ({
-        name: key,
-        lat: stateData[key].coordinates[0],
-        lon: stateData[key].coordinates[1],
-        temperatures: stateData[key].temperatures,
-      }))
+      return Object.keys(stateData).map((key) => new State(
+        key,
+        stateData[key].coordinates[0],
+        stateData[key].coordinates[1],
+        stateData[key].temperatures,
+      ))
     },
 
     async loadFromLocalStorage() {
-      const savedRoute = localStorage.getItem('routeData')
-      const savedTempRange = localStorage.getItem('tempRange')
-
+      const savedRoute = localStorage.getItem('routeData');
+      const savedTempRange = localStorage.getItem('tempRange');
+    
       if (savedRoute) {
-        this.initialRoute = JSON.parse(savedRoute)
+        const rawData = JSON.parse(savedRoute);
+        this.initialRoute = rawData.map(
+          (s: any) => new State(s.name, s.lat, s.lon, s.temperatures)
+        );
       } else {
-        this.initialRoute = await this.loadOriginalRouteFromFile()
+        this.initialRoute = await this.loadOriginalRouteFromFile();
       }
-
+    
       if (savedTempRange) {
-        this.tempRange = JSON.parse(savedTempRange)
+        this.tempRange = JSON.parse(savedTempRange);
       }
     },
 
@@ -55,121 +54,18 @@ export const useRouteStore = defineStore('route', {
       this.saveToLocalStorage()
     },
 
-    async sortRouteTSP(initialMaxDistance: number = 600) {
-      this.initialRoute = await this.loadOriginalRouteFromFile();
-      if (this.initialRoute.length < 2) return;
-    
-      const distance = (a: State, b: State) => {
-        const R = 3958.8;
-        const dLat = (b.lat - a.lat) * (Math.PI / 180);
-        const dLon = (b.lon - a.lon) * (Math.PI / 180);
-        const lat1 = a.lat * (Math.PI / 180);
-        const lat2 = b.lat * (Math.PI / 180);
-    
-        const aVal = Math.sin(dLat / 2) ** 2 + Math.sin(dLon / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
-        const c = 2 * Math.atan2(Math.sqrt(aVal), Math.sqrt(1 - aVal));
-    
-        return R * c;
-      };
-    
-      const twoOpt = (route: State[]) => {
-        let improved = true;
-        while (improved) {
-          improved = false;
-          for (let i = 1; i < route.length - 1; i++) {
-            for (let j = i + 1; j < route.length; j++) {
-              const newRoute = [...route];
-              newRoute.splice(i, j - i + 1, ...route.slice(i, j + 1).reverse());
-    
-              const currentDistance = distance(route[i - 1], route[i]) + distance(route[j], route[(j + 1) % route.length]);
-              const newDistance = distance(newRoute[i - 1], newRoute[i]) + distance(newRoute[j], newRoute[(j + 1) % newRoute.length]);
-    
-              if (newDistance < currentDistance) {
-                route = newRoute;
-                improved = true;
-              }
-            }
-          }
-        }
-        return route;
-      };
-    
-      let bestRoute: State[] = [];
-      let iterationCount = 0;
-      let stagnationCount = 0;
-      const YIELD_INTERVAL = 1000;
-      const STAGNATION_THRESHOLD = 5000;
-    
-      let maxDistance = initialMaxDistance;
-      let routeFound = false;
-    
-      const startTime = performance.now();
-      console.log(`Starting TSP calculation with initial maxDistance: ${maxDistance} miles`);
-    
-      while (!routeFound) {
-        bestRoute = [];
-        iterationCount = 0;
-        stagnationCount = 0;
-    
-        const findRoute = async (current: State, visited: State[], remaining: State[]) => {
-          visited.push(current);
-    
-          if (visited.length > bestRoute.length) {
-            bestRoute = [...visited];
-            stagnationCount = 0;
-            console.log(`New best route found with length: ${bestRoute.length} (Iteration: ${iterationCount})`);
-          } else {
-            stagnationCount++;
-          }
-    
-          if (stagnationCount >= STAGNATION_THRESHOLD) return;
-    
-          const candidates = remaining
-            .filter(city => distance(current, city) <= maxDistance)
-            .sort((a, b) => distance(current, a) - distance(current, b));
-    
-          for (const next of candidates) {
-            const newRemaining = remaining.filter(city => city !== next);
-            iterationCount++;
-    
-            if (iterationCount % YIELD_INTERVAL === 0) {
-              console.log(`Iteration: ${iterationCount}, Current best route length: ${bestRoute.length}`);
-              await new Promise(resolve => setTimeout(resolve, 0));
-            }
-    
-            await findRoute(next, [...visited], newRemaining);
-    
-            if (stagnationCount >= STAGNATION_THRESHOLD) break;
-          }
-        };
-    
-        const randomIndex = Math.floor(Math.random() * this.initialRoute.length);
-        const start = this.initialRoute[randomIndex];
-        const remaining = [...this.initialRoute];
-        remaining.splice(randomIndex, 1);
-    
-        console.log(`Processing random starting node ${randomIndex + 1}/${this.initialRoute.length}`);
-        await findRoute(start, [], remaining);
-    
-        if (bestRoute.length === this.initialRoute.length) {
-          routeFound = true;
-          console.log(`Successfully found a complete route with maxDistance: ${maxDistance}`);
-        } else {
-          maxDistance += 50;
-          console.warn(`Incomplete route found. Increasing maxDistance to ${maxDistance} miles and retrying.`);
-        }
+    async sortRouteTSP(initialMaxDistance = 600) {
+      this.sorting = true
+
+      const optimizer = new RouteOptimizer(this.initialRoute, initialMaxDistance)
+      const bestRoute = await optimizer.findOptimalRoute()
+
+      if (bestRoute.length > 0) {
+        this.initialRoute = bestRoute
+        this.saveToLocalStorage()
       }
-    
-      bestRoute = twoOpt(bestRoute);
-    
-      const endTime = performance.now();
-      console.log(`TSP calculation completed in ${(endTime - startTime).toFixed(2)} ms`);
-      console.log(`Best route length found: ${bestRoute.length}`);
-    
-      if (routeFound) {
-        this.initialRoute = bestRoute;
-        this.saveToLocalStorage();
-      }
+
+      this.sorting = false
     }
   },
 

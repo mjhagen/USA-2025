@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { defineProps, computed } from 'vue'
+import { computed } from 'vue'
 import { calculateDateAndTemp } from '../utils/dateUtils'
+import type { State } from '../models/State'
 
-interface Props {
-  route: Array<{ name: string; lat: number; lon: number; temperatures: number[] }>
+const props = defineProps<{
+  route: State[]
   tempRange: [number, number]
-}
-
-const props = defineProps<Props>()
+}>()
 
 const dates = computed(() =>
   props.route.map((state, index) =>
-    calculateDateAndTemp(state, index, props.tempRange) // Pass tempRange as the third argument
+    calculateDateAndTemp(state, index, props.tempRange)
   )
 )
 </script>
