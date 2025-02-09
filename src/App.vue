@@ -7,8 +7,12 @@
     </div>
 
     <div class="flex w-full h-screen">
-      <StateList :route="routeStore.getInitialRoute" :tempRange="routeStore.tempRange" />
-      <MapView :route="routeStore.getInitialRoute" :tempRange="routeStore.tempRange" />
+      <div class="w-80 overflow-y-auto p-2 bg-gray-100"> <!-- Fixed width of 20rem -->
+        <StateList />
+      </div>
+      <div class="flex-1 h-full"> <!-- Takes up remaining space -->
+        <MapView />
+      </div>
     </div>
   </div>
 </template>

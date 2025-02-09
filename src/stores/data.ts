@@ -4,7 +4,7 @@ import { RouteOptimizer, State } from '../models/State'
 export const useRouteStore = defineStore('route', {
   state: () => ({
     initialRoute: [] as State[],
-    tempRange: [65, 75] as [number, number],
+    tempRange: [15, 32] as [number, number],
     sorting: false
   }),
 

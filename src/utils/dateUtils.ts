@@ -1,6 +1,8 @@
 import type { State } from "../models/State"
 
 // Constants for the travel period
+export const TEMP_MIN = 18
+export const TEMP_MAX = 33
 const START_DATE = new Date(2025, 3, 1) // April 1, 2025
 const END_DATE = new Date(2025, 11, 1)  // December 1, 2025
 const TOTAL_DAYS = (END_DATE.getTime() - START_DATE.getTime()) / (1000 * 60 * 60 * 24)
@@ -20,12 +22,12 @@ export const calculateDateAndTemp = (
 
   const dayOfYear = getDayOfYear(date)
   const tempCelsius = state.temperatures[dayOfYear % 365] ?? 10
-  const tempFahrenheit = celsiusToFahrenheit(tempCelsius)
+  // const tempFahrenheit = celsiusToFahrenheit(tempCelsius)
 
   return {
     date,
-    temp: `${tempFahrenheit.toFixed(1)}°F`,
-    color: getTemperatureColor(tempFahrenheit, tempRange)
+    temp: `${tempCelsius.toFixed(1)}°C`,
+    color: getTemperatureColor(tempCelsius, tempRange)
   }
 }
 
@@ -53,7 +55,7 @@ export const getMonthColor = (date: Date) => {
 /**
  * Converts Celsius to Fahrenheit.
  */
-export const celsiusToFahrenheit = (celsius: number) => (celsius * 9) / 5 + 32
+// export const celsiusToFahrenheit = (celsius: number) => (celsius * 9) / 5 + 32
 
 /**
  * Returns a temperature-based color.
@@ -63,9 +65,7 @@ export const getTemperatureColor = (temp: number, tempRange: [number, number]) =
 
   if (temp >= idealMin && temp <= idealMax) return 'rgb(0, 200, 0)' // Green for ideal temperatures
 
-  const minTemp = 0
-  const maxTemp = 100
-  const normalizedTemp = (temp - minTemp) / (maxTemp - minTemp)
+  const normalizedTemp = (temp - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)
 
   return temp > idealMax
     ? `rgb(${Math.min(255, Math.floor(255 * (normalizedTemp - 0.5) * 2))}, 0, 0)` // Red for hot
