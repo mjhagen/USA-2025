@@ -47,24 +47,60 @@ function generateInitialRoute(): string[] {
             currentState = nearestState;
         }
     }
+    return route;
+}
 
-    // Ensure Kansas & Nebraska are before Texas
-    let kansasIdx = route.indexOf("Kansas");
-    let nebraskaIdx = route.indexOf("Nebraska");
-    let texasIdx = route.indexOf("Texas");
-    if (kansasIdx > texasIdx || nebraskaIdx > texasIdx) {
-        route.splice(texasIdx, 1);
-        route.splice(Math.min(kansasIdx, nebraskaIdx), 0, "Texas");
+/** Evaluates the fitness of a route */
+function evaluateRoute(route: string[]): number {
+    let totalDistance = 0;
+    let tempPenalty = 0;
+    let dateIndex = START_DATE_INDEX;
+    const totalDays = END_DATE_INDEX - START_DATE_INDEX;
+    const totalArea = STATES.reduce((sum, state) => sum + stateData[state].area, 0);
+    const weightedDaysPerState = STATES.reduce((acc, state) => {
+        acc[state] = Math.round((stateData[state].area / totalArea) * totalDays);
+        return acc;
+    }, {} as Record<string, number>);
+    
+    const fullRoute = [START_STATE, ...route, END_STATE];
+    
+    for (let i = 0; i < fullRoute.length - 1; i++) {
+        totalDistance += haversineDistance(stateData[fullRoute[i]].coordinates, stateData[fullRoute[i + 1]].coordinates);
+        const temp = stateData[fullRoute[i]].temperatures[dateIndex];
+        if (temp < TEMP_MIN || temp > TEMP_MAX) tempPenalty += 1000; // Penalize routes outside temperature range
+        dateIndex = (dateIndex + weightedDaysPerState[fullRoute[i]]) % 365;
     }
+    return totalDistance + tempPenalty;
+}
 
-    // Ensure South Carolina & Georgia are before Midwest states
-    let scIdx = route.indexOf("South Carolina");
-    let gaIdx = route.indexOf("Georgia");
-    let ilIdx = route.indexOf("Illinois");
-    let kyIdx = route.indexOf("Kentucky");
-    if (scIdx > ilIdx || gaIdx > kyIdx) {
-        route.splice(ilIdx, 1);
-        route.splice(Math.min(scIdx, gaIdx), 0, "Illinois");
+/** 2.5-opt optimization with priority-based swaps */
+function twoPointFiveOpt(route: string[]): string[] {
+    let improved = true;
+    while (improved) {
+        improved = false;
+        for (let i = 1; i < route.length - 2; i++) {
+            for (let j = i + 1; j < route.length; j++) {
+                let newRoute = [...route];
+                newRoute = newRoute.slice(0, i).concat(newRoute.slice(i, j).reverse(), newRoute.slice(j));
+                if (evaluateRoute(newRoute) < evaluateRoute(route)) {
+                    route = newRoute;
+                    improved = true;
+                }
+                
+                // Prioritize swaps where states are out of order based on longitude
+                if (j < route.length - 1) {
+                    const long1 = stateData[newRoute[j]].coordinates[1];
+                    const long2 = stateData[newRoute[j + 1]].coordinates[1];
+                    if (long1 > long2) {
+                        [newRoute[j], newRoute[j + 1]] = [newRoute[j + 1], newRoute[j]];
+                        if (evaluateRoute(newRoute) < evaluateRoute(route)) {
+                            route = newRoute;
+                            improved = true;
+                        }
+                    }
+                }
+            }
+        }
     }
     return route;
 }
@@ -74,7 +110,8 @@ async function geneticAlgorithm(iterations: number = 100): Promise<string[]> {
     let population = Array.from({ length: 20 }, generateInitialRoute);
     
     for (let i = 0; i < iterations; i++) {
-        const bestRoutes = population.sort((a, b) => evaluateRoute(a) - evaluateRoute(b)).slice(0, 5);
+      const bestRoutes = population.sort((a, b) => evaluateRoute(a) - evaluateRoute(b)).slice(0, 5);
+      console.log(bestRoutes)
         
         let newPopulation: string[][] = [];
         while (newPopulation.length < 20) {
@@ -83,7 +120,7 @@ async function geneticAlgorithm(iterations: number = 100): Promise<string[]> {
             let child = [...parent1.slice(0, parent1.length / 2), ...parent2.slice(parent2.length / 2)];
             child = Array.from(new Set(child)); // Remove duplicates
             if (Math.random() < 0.1) child.reverse(); // Simple mutation
-            newPopulation.push(child);
+            newPopulation.push(twoPointFiveOpt(child)); // Apply enhanced 2.5-opt for refinement
         }
         population = newPopulation;
     }
